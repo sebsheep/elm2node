@@ -33,6 +33,8 @@ toList (List x xs) =
 
 -- INSTANCES
 
+instance Show a => Show (List a) where
+  show (List x xs) =  show (x:xs)
 
 instance Functor List where
   fmap func (List x xs) = List (func x) (map func xs)

@@ -1951,6 +1951,7 @@ toModuleNameConventionTable srcDir names =
 data Generate
   = GenerateCannotLoadArtifacts
   | GenerateCannotOptimizeDebugValues ModuleName.Raw [ModuleName.Raw]
+  | GenerateWrongExposedPayload [(ModuleName.Raw, N.Name)]
 
 
 toGenerateReport :: Generate -> Help.Report
@@ -1980,7 +1981,15 @@ toGenerateReport problem =
             \ resulting in unpredictable behavior. I hope that clarifies why this restriction\
             \ exists!"
         ]
-
+    GenerateWrongExposedPayload names ->
+      Help.report "WRONG EXPOSED FUNCTION TYPE" Nothing
+        "The following function cannot be exposed to JS."
+        [ D.indent 4 $ D.red $ D.vcat $ 
+            map (\(m, n) -> D.fromChars $ (ModuleName.toChars m ++ "." ++ N.toChars n)) names
+        , D.reflow
+          "The arguments and result types of the functions exposed to JS have similar restrictions\ 
+            \ than what you have in ports and flags."
+        ]
 
 
 -- CORRUPT CACHE

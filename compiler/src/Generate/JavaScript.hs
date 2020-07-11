@@ -3,6 +3,8 @@ module Generate.JavaScript
   ( generate
   , generateForRepl
   , generateForReplEndpoint
+  , generateForNodeJs
+  , ExportedValues
   )
   where
 
@@ -19,6 +21,7 @@ import qualified Data.Utf8 as Utf8
 
 import qualified AST.Canonical as Can
 import qualified AST.Optimized as Opt
+import qualified AST.Utils.Type as Typ
 import qualified Data.Index as Index
 import qualified Elm.Kernel as K
 import qualified Elm.ModuleName as ModuleName
@@ -142,6 +145,62 @@ postMessage localizer home maybeName tipe =
   \  type: " <> B.stringUtf8 (show (D.toString tipeDoc)) <> "\n\
   \});\n"
 
+
+
+-- GENERATE FOR NODE.JS
+
+
+type ExportedValues = Map.Map (ModuleName.Canonical, Name.Name) Can.Annotation
+
+generateForNodeJs :: Mode.Mode -> Opt.GlobalGraph -> ExportedValues -> B.Builder
+generateForNodeJs mode (Opt.GlobalGraph graph _) exported =
+  let
+    state = Map.foldrWithKey (addExportedValue mode graph) emptyState exported
+  in
+  Functions.functions
+  <> perfNote mode
+  <> stateToBuilder state
+  <> toExports mode exported
+
+addExportedValue :: Mode.Mode -> Graph -> (ModuleName.Canonical, Name.Name) -> Can.Annotation -> State -> State
+addExportedValue mode graph (moduleName, valueName) _ state =
+  addGlobal mode graph state (Opt.Global moduleName valueName)
+
+  
+toExports :: Mode.Mode -> ExportedValues -> B.Builder
+toExports mode exported =
+  "\n\nmodule.exports = {\n"
+  <> (List.foldl (<>) "" (List.map (uncurry toExport ) (Map.toList (Map.map  Typ.toFunctionType exported))))
+  <> "}"
+
+toExport :: (ModuleName.Canonical, Name.Name) -> Typ.FunctionType -> B.Builder
+toExport (moduleName, valueName) (Typ.FunctionType _ res args) =
+  let
+    name =
+      JsName.toBuilder (JsName.fromGlobal moduleName valueName)
+  in
+  "    " <> Utf8.toBuilder valueName <> ": " <>
+    case (List.length args) of
+      0 ->
+        name <> ",\n"
+
+      1 ->
+        "function(a) {"
+        <> " return " <> name <> "(a);},\n"
+
+      n | n <= 9 ->
+        let
+          innerArgs =
+            List.foldl (<>) ""
+            $ List.intersperse ", "
+            $ List.map (JsName.toBuilder . JsName.fromInt) [0..(n - 1)]
+
+        in
+        "function(" <>  innerArgs <> ") {"
+        <> " return " <> JsName.toBuilder (JsName.makeA n) <> "(" <> name <> ", " <> innerArgs <> ");},\n"
+        
+      _ ->
+        error $ "Too many args for the exported function " ++ Name.toChars valueName
 
 
 -- GRAPH TRAVERSAL STATE

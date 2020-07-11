@@ -38,11 +38,9 @@ import Terminal (Parser(..))
 
 data Flags =
   Flags
-    { _debug :: Bool
-    , _optimize :: Bool
-    , _output :: Maybe Output
+    { _output :: Maybe Output
     , _report :: Maybe ReportType
-    , _docs :: Maybe FilePath
+    -- , _optimize :: Bool
     }
 
 
@@ -64,7 +62,7 @@ type Task a = Task.Task Exit.Make a
 
 
 run :: [FilePath] -> Flags -> IO ()
-run paths flags@(Flags _ _ _ report _) =
+run paths flags@(Flags _ report) =
   do  style <- getStyle report
       maybeRoot <- Stuff.findRoot
       Reporting.attemptWithStyle style Exit.makeToReport $
@@ -74,15 +72,15 @@ run paths flags@(Flags _ _ _ report _) =
 
 
 runHelp :: FilePath -> [FilePath] -> Reporting.Style -> Flags -> IO (Either Exit.Make ())
-runHelp root paths style (Flags debug optimize maybeOutput _ maybeDocs) =
+runHelp root paths style (Flags maybeOutput _) =
   BW.withScope $ \scope ->
   Stuff.withRootLock root $ Task.run $
-  do  desiredMode <- getMode debug optimize
+  do  desiredMode <- getMode 
       details <- Task.eio Exit.MakeBadDetails (Details.load style scope root)
       case paths of
         [] ->
           do  exposed <- getExposed details
-              buildExposed style root details maybeDocs exposed
+              buildExposed style root details exposed
 
         p:ps ->
           do  artifacts <- buildPaths style root details (NE.List p ps)
@@ -129,13 +127,14 @@ getStyle report =
     Just Json -> return Reporting.json
 
 
-getMode :: Bool -> Bool -> Task DesiredMode
-getMode debug optimize =
-  case (debug, optimize) of
-    (True , True ) -> Task.throw Exit.MakeCannotOptimizeAndDebug
-    (True , False) -> return Debug
-    (False, False) -> return Dev
-    (False, True ) -> return Prod
+getMode :: Task DesiredMode
+getMode  =
+  return Dev
+  -- case (debug, optimize) of
+  --   (True , True ) -> Task.throw Exit.MakeCannotOptimizeAndDebug
+  --   (True , False) -> return Debug
+  --   (False, False) -> return Dev
+  --   (False, True ) -> return Prod
 
 
 getExposed :: Details.Details -> Task (NE.List ModuleName.Raw)
@@ -154,10 +153,10 @@ getExposed (Details.Details _ validOutline _ _ _ _) =
 -- BUILD PROJECTS
 
 
-buildExposed :: Reporting.Style -> FilePath -> Details.Details -> Maybe FilePath -> NE.List ModuleName.Raw -> Task ()
-buildExposed style root details maybeDocs exposed =
+buildExposed :: Reporting.Style -> FilePath -> Details.Details -> NE.List ModuleName.Raw -> Task ()
+buildExposed style root details exposed =
   let
-    docsGoal = maybe Build.IgnoreDocs Build.WriteDocs maybeDocs
+    docsGoal = maybe Build.IgnoreDocs Build.WriteDocs Nothing
   in
   Task.eio Exit.MakeCannotBuild $
     Build.fromExposed style root details docsGoal exposed

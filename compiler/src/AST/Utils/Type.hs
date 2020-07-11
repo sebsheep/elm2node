@@ -5,6 +5,8 @@ module AST.Utils.Type
   , dealias
   , deepDealias
   , iteratedDealias
+  , FunctionType(..)
+  , toFunctionType
   )
   where
 
@@ -12,7 +14,7 @@ module AST.Utils.Type
 import qualified Data.Map as Map
 import qualified Data.Name as Name
 
-import AST.Canonical (Type(..), AliasType(..), FieldType(..))
+import AST.Canonical (Type(..), AliasType(..), FieldType(..), Annotation(..), FreeVars)
 
 
 
@@ -124,3 +126,36 @@ iteratedDealias tipe =
 
     _ ->
       tipe
+
+
+
+-- FUNCTION TYPE
+
+data FunctionType =
+  FunctionType
+    { _f_freeVars :: FreeVars
+    , _resultType :: Type
+    , _args :: [Type]
+    }
+
+toFunctionType :: Annotation -> FunctionType
+toFunctionType (Forall freeVars tipe) =
+  let
+    (res, args) = 
+      gatherArgs tipe
+  in
+  FunctionType freeVars res args
+    
+
+gatherArgs :: Type -> (Type, [Type])
+gatherArgs tipe =
+  case tipe of
+    TLambda arg res ->
+      let
+        (res2, args) =
+          gatherArgs res
+      in
+      (res2, arg : args)
+  
+    _ ->
+      (tipe, [])

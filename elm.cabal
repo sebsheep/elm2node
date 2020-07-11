@@ -55,14 +55,7 @@ Executable elm
         Main.hs
 
     other-modules:
-        Bump
-        Develop
-        Diff
-        Init
-        Install
         Make
-        Publish
-        Repl
 
         -- terminal args
         Terminal
@@ -70,12 +63,6 @@ Executable elm
         Terminal.Error
         Terminal.Helpers
         Terminal.Internal
-
-        -- from terminal/
-        Develop.Generate.Help
-        Develop.Generate.Index
-        Develop.StaticFiles
-        Develop.StaticFiles.Build
 
         -- from builder/
         Build

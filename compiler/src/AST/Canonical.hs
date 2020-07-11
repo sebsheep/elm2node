@@ -13,6 +13,7 @@ module AST.Canonical
   , PatternCtorArg(..)
   -- types
   , Annotation(..)
+  , FreeVars
   , Type(..)
   , AliasType(..)
   , FieldType(..)
