@@ -30,6 +30,8 @@ import qualified Generate.JavaScript.Expression as Expr
 import qualified Generate.JavaScript.Functions as Functions
 import qualified Generate.JavaScript.Name as JsName
 import qualified Generate.Mode as Mode
+import qualified Optimize.Names as Names
+import qualified Optimize.Port as Port
 import qualified Reporting.Doc as D
 import qualified Reporting.Render.Type as RT
 import qualified Reporting.Render.Type.Localizer as L
@@ -163,23 +165,29 @@ generateForNodeJs mode (Opt.GlobalGraph graph _) exported =
   <> toExports mode exported
 
 addExportedValue :: Mode.Mode -> Graph -> (ModuleName.Canonical, Name.Name) -> Can.Annotation -> State -> State
-addExportedValue mode graph (moduleName, valueName) _ state =
-  addGlobal mode graph state (Opt.Global moduleName valueName)
-
+addExportedValue mode graph (moduleName, valueName) annotation state =
+  let
+    (Typ.FunctionType _ res _) = (Typ.toFunctionType annotation)
+    (deps, fields, _) = Names.run (Port.toEncoder res)
+    newState = Set.foldl' (addGlobal mode graph) state deps
+  in
+  
+  addGlobal mode graph newState (Opt.Global moduleName valueName)
+  
   
 toExports :: Mode.Mode -> ExportedValues -> B.Builder
 toExports mode exported =
   "\n\nmodule.exports = "
   <> (JS.exprToBuilder $
      JS.Object $
-      List.map (uncurry toExport ) (Map.toList exported))
+      List.map (uncurry (toExport mode)) (Map.toList exported))
 
-toExport :: (ModuleName.Canonical, Name.Name) -> Can.Annotation -> (JsName.Name, JS.Expr)
-toExport name@(_ , valueName) annotation =
-  (JsName.fromLocal valueName, toExportExpr name (Typ.toFunctionType annotation))
+toExport :: Mode.Mode -> (ModuleName.Canonical, Name.Name) -> Can.Annotation -> (JsName.Name, JS.Expr)
+toExport mode name@(_ , valueName) annotation =
+  (JsName.fromLocal valueName, toExportExpr  mode name (Typ.toFunctionType annotation))
 
-toExportExpr :: (ModuleName.Canonical, Name.Name) -> Typ.FunctionType -> JS.Expr
-toExportExpr (moduleName, valueName) (Typ.FunctionType _ res args) =
+toExportExpr :: Mode.Mode -> (ModuleName.Canonical, Name.Name) -> Typ.FunctionType -> JS.Expr
+toExportExpr mode (moduleName, valueName) (Typ.FunctionType _ res args) =
     let
       name =
         JS.Ref  $
@@ -187,7 +195,9 @@ toExportExpr (moduleName, valueName) (Typ.FunctionType _ res args) =
     in
     case  args of
       [] ->
-        name
+        -- (deps, fields, encoder) = Names.run (Port.toEncoder res)
+        let (_, _, encoder) = Names.run (Port.toEncoder res) in
+        JS.Call (Expr.codeToExpr (Expr.generate mode encoder)) [ name]
 
       [_] ->
         let

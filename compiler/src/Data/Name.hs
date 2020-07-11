@@ -81,6 +81,8 @@ instance Binary.Binary (Utf8.Utf8 ELM_NAME) where
   get = Utf8.getUnder256
   put = Utf8.putUnder256
 
+instance Show (Utf8.Utf8 ELM_NAME) where
+  show = toChars
 
 
 -- TO
