@@ -169,36 +169,50 @@ addExportedValue mode graph (moduleName, valueName) _ state =
   
 toExports :: Mode.Mode -> ExportedValues -> B.Builder
 toExports mode exported =
-  "\n\nmodule.exports = {\n"
-  <> (List.foldl (<>) "" (List.map (uncurry toExport ) (Map.toList (Map.map  Typ.toFunctionType exported))))
-  <> "}"
+  "\n\nmodule.exports = "
+  <> (JS.exprToBuilder $
+     JS.Object $
+      List.map (uncurry toExport ) (Map.toList exported))
 
-toExport :: (ModuleName.Canonical, Name.Name) -> Typ.FunctionType -> B.Builder
-toExport (moduleName, valueName) (Typ.FunctionType _ res args) =
-  let
-    name =
-      JsName.toBuilder (JsName.fromGlobal moduleName valueName)
-  in
-  "    " <> Utf8.toBuilder valueName <> ": " <>
-    case (List.length args) of
-      0 ->
-        name <> ",\n"
+toExport :: (ModuleName.Canonical, Name.Name) -> Can.Annotation -> (JsName.Name, JS.Expr)
+toExport name@(_ , valueName) annotation =
+  (JsName.fromLocal valueName, toExportExpr name (Typ.toFunctionType annotation))
 
-      1 ->
-        "function(a) {"
-        <> " return " <> name <> "(a);},\n"
+toExportExpr :: (ModuleName.Canonical, Name.Name) -> Typ.FunctionType -> JS.Expr
+toExportExpr (moduleName, valueName) (Typ.FunctionType _ res args) =
+    let
+      name =
+        JS.Ref  $
+          JsName.fromGlobal moduleName valueName
+    in
+    case  args of
+      [] ->
+        name
 
-      n | n <= 9 ->
+      [_] ->
         let
+          arg = JsName.fromInt 0
+        in
+        JS.Function Nothing [arg] 
+          [JS.Return $
+            JS.Call name [JS.Ref arg]
+          ]
+
+      _ | List.length args <= 9 ->
+        let
+          n = 
+            List.length args
+          
           innerArgs =
-            List.foldl (<>) ""
-            $ List.intersperse ", "
-            $ List.map (JsName.toBuilder . JsName.fromInt) [0..(n - 1)]
+            List.map JsName.fromInt [0..(n - 1)]
 
         in
-        "function(" <>  innerArgs <> ") {"
-        <> " return " <> JsName.toBuilder (JsName.makeA n) <> "(" <> name <> ", " <> innerArgs <> ");},\n"
-        
+        JS.Function Nothing innerArgs
+          [ JS.Return $
+              JS.Call (JS.Ref (JsName.makeA n)) $ 
+                name:(List.map JS.Ref innerArgs)
+          ]
+
       _ ->
         error $ "Too many args for the exported function " ++ Name.toChars valueName
 
