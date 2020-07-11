@@ -40,7 +40,7 @@ data Flags =
   Flags
     { _output :: Maybe Output
     , _report :: Maybe ReportType
-    -- , _optimize :: Bool
+    , _optimize :: Bool
     }
 
 
@@ -62,7 +62,7 @@ type Task a = Task.Task Exit.Make a
 
 
 run :: [FilePath] -> Flags -> IO ()
-run paths flags@(Flags _ report) =
+run paths flags@(Flags _ report _) =
   do  style <- getStyle report
       maybeRoot <- Stuff.findRoot
       Reporting.attemptWithStyle style Exit.makeToReport $
@@ -72,10 +72,10 @@ run paths flags@(Flags _ report) =
 
 
 runHelp :: FilePath -> [FilePath] -> Reporting.Style -> Flags -> IO (Either Exit.Make ())
-runHelp root paths style (Flags maybeOutput _) =
+runHelp root paths style (Flags maybeOutput _ optimize) =
   BW.withScope $ \scope ->
   Stuff.withRootLock root $ Task.run $
-  do  desiredMode <- getMode 
+  do  let desiredMode = getMode optimize 
       details <- Task.eio Exit.MakeBadDetails (Details.load style scope root)
       case paths of
         [] ->
@@ -127,15 +127,12 @@ getStyle report =
     Just Json -> return Reporting.json
 
 
-getMode :: Task DesiredMode
-getMode  =
-  return Dev
-  -- case (debug, optimize) of
-  --   (True , True ) -> Task.throw Exit.MakeCannotOptimizeAndDebug
-  --   (True , False) -> return Debug
-  --   (False, False) -> return Dev
-  --   (False, True ) -> return Prod
-
+getMode :: Bool -> DesiredMode
+getMode optimize=
+  if optimize then 
+    Prod
+  else 
+    Dev
 
 getExposed :: Details.Details -> Task (NE.List ModuleName.Raw)
 getExposed (Details.Details _ validOutline _ _ _ _) =

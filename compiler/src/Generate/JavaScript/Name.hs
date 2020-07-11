@@ -3,6 +3,7 @@
 module Generate.JavaScript.Name
   ( Name
   , toBuilder
+  , fromString
   , fromIndex
   , fromInt
   , fromLocal
@@ -42,6 +43,9 @@ newtype Name =
 
 -- CONSTRUCTORS
 
+fromString :: String -> Name
+fromString name =
+    Name $ Utf8.toBuilder $ Utf8.fromChars name
 
 fromIndex :: Index.ZeroBased -> Name
 fromIndex index =

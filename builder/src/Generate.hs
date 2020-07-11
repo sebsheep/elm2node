@@ -140,10 +140,18 @@ gatherTopLevelFns root pkg modules roots =
 hasWrongType :: Can.Annotation -> Bool
 hasWrongType annotation =
   case Type.toFunctionType annotation of
-    Type.FunctionType _ res args ->
+    Type.FunctionType _ res [] ->
+      not $ checkPayload res
+
+    Type.FunctionType _ res [arg] ->
       not $
-        all checkPayload args
+        checkPayload arg
         && checkPayload res
+    
+    -- more than 2 args
+    Type.FunctionType _ _ _ ->
+      True
+    
 
 checkPayload :: Can.Type -> Bool
 checkPayload tipe =

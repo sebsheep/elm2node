@@ -167,14 +167,28 @@ generateForNodeJs mode (Opt.GlobalGraph graph _) exported =
 addExportedValue :: Mode.Mode -> Graph -> (ModuleName.Canonical, Name.Name) -> Can.Annotation -> State -> State
 addExportedValue mode graph (moduleName, valueName) annotation state =
   let
-    (Typ.FunctionType _ res _) = (Typ.toFunctionType annotation)
-    (deps, fields, _) = Names.run (Port.toEncoder res)
+    deps = gatherDeps $ Typ.toFunctionType annotation
     newState = Set.foldl' (addGlobal mode graph) state deps
   in
-  
   addGlobal mode graph newState (Opt.Global moduleName valueName)
   
-  
+gatherDeps :: Typ.FunctionType -> Set.Set Opt.Global
+gatherDeps (Typ.FunctionType _ res args) =
+  let
+    -- should we take care of this `fields` value (2nd place in the tuple returned
+    -- by Names.run)? Doesn't seem to change anything!
+    resDeps = fst3 $ Names.run $ Port.toEncoder res
+    argsDeps = List.map (fst3 . Names.run . Port.toDecoder) args
+  in
+  Set.union resDeps (Set.unions argsDeps)
+
+fst3 :: (a, b, c) -> a
+fst3 (a, _, _) = a
+
+third :: (a, b, c) -> c
+third (_, _, c) = c
+
+
 toExports :: Mode.Mode -> ExportedValues -> B.Builder
 toExports mode exported =
   "\n\nmodule.exports = "
@@ -186,42 +200,64 @@ toExport :: Mode.Mode -> (ModuleName.Canonical, Name.Name) -> Can.Annotation -> 
 toExport mode name@(_ , valueName) annotation =
   (JsName.fromLocal valueName, toExportExpr  mode name (Typ.toFunctionType annotation))
 
+
+jsRef :: String -> JS.Expr
+jsRef name =
+    JS.Ref (JsName.fromString name)
+
+decodeArg :: Mode.Mode -> Name.Name -> JsName.Name -> Can.Type -> [JS.Stmt]
+decodeArg mode funcName argName tipe =
+  let
+    decoder = Expr.codeToExpr $ Expr.generate mode $
+      third $ Names.run $ Port.toDecoder tipe
+  in
+  [ JS.Var (JsName.fromString "result") $
+        JS.Call (JS.Ref (JsName.makeA 2))
+        [ jsRef "_Json_run"
+        , decoder
+        , JS.Call (jsRef "_Json_wrap") [JS.Ref argName]
+        ]
+  , JS.IfStmt
+      (JS.Prefix JS.PrefixNot $ JS.Call (jsRef "$elm$core$Result$isOk") [jsRef "result"])
+      (JS.Throw $ JS.String $
+         "Trying to send an unexpected type of value through exported function `" 
+         <> Name.toBuilder funcName
+         <> "`"
+      )
+      JS.EmptyStmt
+  , JS.Var argName (JS.Access (jsRef "result") (JsName.fromString "a"))
+  ]
+     
+  
 toExportExpr :: Mode.Mode -> (ModuleName.Canonical, Name.Name) -> Typ.FunctionType -> JS.Expr
 toExportExpr mode (moduleName, valueName) (Typ.FunctionType _ res args) =
     let
       name =
         JS.Ref  $
           JsName.fromGlobal moduleName valueName
+
+      encoder = third $ Names.run $ Port.toEncoder res
+      
+      encoderJsCall x =
+        JS.Call (JS.Ref (JsName.fromString "_Json_unwrap")) 
+          [ JS.Call (Expr.codeToExpr (Expr.generate mode encoder)) [x] ]
+
     in
     case  args of
       [] ->
-        -- (deps, fields, encoder) = Names.run (Port.toEncoder res)
-        let (_, _, encoder) = Names.run (Port.toEncoder res) in
-        JS.Call (Expr.codeToExpr (Expr.generate mode encoder)) [ name]
+        encoderJsCall name
 
-      [_] ->
+      [arg] ->
         let
-          arg = JsName.fromInt 0
-        in
-        JS.Function Nothing [arg] 
-          [JS.Return $
-            JS.Call name [JS.Ref arg]
-          ]
-
-      _ | List.length args <= 9 ->
-        let
-          n = 
-            List.length args
+          innerArg = JsName.fromInt 0
           
-          innerArgs =
-            List.map JsName.fromInt [0..(n - 1)]
-
         in
-        JS.Function Nothing innerArgs
-          [ JS.Return $
-              JS.Call (JS.Ref (JsName.makeA n)) $ 
-                name:(List.map JS.Ref innerArgs)
-          ]
+        JS.Function Nothing [innerArg] 
+          ( decodeArg mode valueName innerArg arg ++
+            [JS.Return $ encoderJsCall
+               $ JS.Call name [JS.Ref innerArg]
+            ]
+          )
 
       _ ->
         error $ "Too many args for the exported function " ++ Name.toChars valueName

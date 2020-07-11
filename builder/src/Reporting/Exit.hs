@@ -1983,12 +1983,13 @@ toGenerateReport problem =
         ]
     GenerateWrongExposedPayload names ->
       Help.report "WRONG EXPOSED FUNCTION TYPE" Nothing
-        "The following function cannot be exposed to JS."
+        "The following functions cannot be exposed to JS."
         [ D.indent 4 $ D.red $ D.vcat $ 
             map (\(m, n) -> D.fromChars $ (ModuleName.toChars m ++ "." ++ N.toChars n)) names
         , D.reflow
           "The arguments and result types of the functions exposed to JS have similar restrictions\ 
-            \ than what you have in ports and flags."
+            \ than what you have in ports and flags. Moreover, you can only use \"values\" or functions\
+            \ with one argument."
         ]
 
 
