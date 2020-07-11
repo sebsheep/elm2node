@@ -46,7 +46,6 @@ data Flags =
 
 data Output
   = JS FilePath
-  | Html FilePath
   | DevNull
 
 
@@ -102,18 +101,11 @@ runHelp root paths style (Flags maybeOutput _ optimize) =
                   return ()
 
                 Just (JS target) ->
-                  case getNoMains artifacts of
-                    [] ->
-                      do  builder <- toBuilder root details desiredMode artifacts
-                          generate style target builder (Build.getRootNames artifacts)
+                  do  builder <- toBuilder root details desiredMode artifacts
+                      generate style target builder (Build.getRootNames artifacts)
 
-                    name:names ->
-                      Task.throw (Exit.MakeNonMainFilesIntoJavaScript name names)
+                  
 
-                Just (Html target) ->
-                  do  name <- hasOneMain artifacts
-                      builder <- toBuilder root details desiredMode artifacts
-                      generate style target (Html.sandwich name builder) (NE.List name [])
 
 
 
@@ -289,7 +281,6 @@ output =
 parseOutput :: String -> Maybe Output
 parseOutput name
   | isDevNull name      = Just DevNull
-  | hasExt ".html" name = Just (Html name)
   | hasExt ".js"   name = Just (JS name)
   | otherwise           = Nothing
 
