@@ -11,12 +11,12 @@ cd ~/Desktop/
 
 # Download the 0.1.0 binary for Linux.
 #
-# +----------------+----------------------+
-# | FLAG           | MEANING              |
-# +----------------+----------------------+
-# | -L             | follow redirects     |
-# | -o elm2node.gz | name the file elm.gz |
-# +----------------+----------------------+
+# +----------------+---------------------------+
+# | FLAG           | MEANING                   |
+# +----------------+---------------------------+
+# | -L             | follow redirects          |
+# | -o elm2node.gz | name the file elm2node.gz |
+# +----------------+---------------------------+
 #
 curl -L -o elm2node.gz https://github.com/sebsheep/elm2node/releases/download/0.1.0-alpha-2/elm2node.gz
 
