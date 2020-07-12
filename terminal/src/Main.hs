@@ -25,22 +25,21 @@ import qualified Make
 
 main :: IO ()
 main =
-  Terminal.app intro outro
-    [ make ]
+  Terminal.app intro outro make
 
 intro :: P.Doc
 intro =
   P.vcat
     [ P.fillSep
         ["Hi,","thank","you","for","trying","out"
-        ,P.green "Elm"
+        ,P.green "elm2node"
         ,P.green (P.text (V.toChars V.compiler)) <> "."
         ,"I hope you like it!"
         ]
     , ""
     , P.black "-------------------------------------------------------------------------------"
-    , P.black "I highly recommend working through <https://guide.elm-lang.org> to get started."
-    , P.black "It teaches many important concepts, including how to use `elm` in the terminal."
+    , P.black "This is a modified elm compiler to produce a Node.js module exposing pure"
+    , P.black "functions."
     , P.black "-------------------------------------------------------------------------------"
     ]
 
@@ -60,16 +59,28 @@ make :: Terminal.Command
 make =
   let
     details =
-      "The `make` command compiles Elm code into JS or HTML:"
+      "Compiles Elm code into Node.js module:"
 
     example =
       stack
         [ reflow
             "For example:"
-        , P.indent 4 $ P.green "elm make src/Main.elm"
+        , P.indent 4 $ P.green "elm2node src/Main.elm"
         , reflow
-            "This tries to compile an Elm file named src/Main.elm, generating an index.html\
-            \ file if possible."
+            "This tries to compile an Elm file named src/Main.elm, generating an elm.js\
+            \ Node.js module if possible. This Node.js module will expose the same values\
+            \ exposed in the `Main.elm` file. Some restrictions:"
+        , P.indent 4 $ P.vcat
+          [ reflow "* only \"static\" values or functions with one argument can be exposed"
+          , P.text "* the only accepted types in exposed values are:"
+          , P.indent 4 $
+              P.hcat $
+                List.intersperse (P.text ", ") $
+                  List.map P.green
+                    ["Int", "Float", "String", "Maybe", "Records", "List", "Array", "Json.Value"]
+            
+          , reflow "* exposed user defined types are silently ignored."
+          ]
         ]
 
     makeFlags =
@@ -79,7 +90,7 @@ make =
         |-- onOff "optimize" "Turn on optimizations to make code smaller and faster. For example, the compiler renames record fields to be as short as possible and unboxes values to reduce allocation."
 
   in
-  Terminal.Command "make" Uncommon details example (zeroOrMore elmFile) makeFlags Make.run
+  Terminal.Command "make" Uncommon details example (oneOrMore elmFile) makeFlags Make.run
 
 
 

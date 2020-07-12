@@ -133,7 +133,7 @@ Executable worker
         Parse.Symbol
         Parse.Type
         Parse.Variable
-        Paths_elm
+        Paths_elm2node
         Repl
         Reporting
         Reporting.Annotation

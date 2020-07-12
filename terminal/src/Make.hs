@@ -60,13 +60,13 @@ data ReportType
 type Task a = Task.Task Exit.Make a
 
 
-run :: [FilePath] -> Flags -> IO ()
-run paths flags@(Flags _ report _) =
+run :: (FilePath, [FilePath]) -> Flags -> IO ()
+run (firstPath,otherPaths) flags@(Flags _ report _) =
   do  style <- getStyle report
       maybeRoot <- Stuff.findRoot
       Reporting.attemptWithStyle style Exit.makeToReport $
         case maybeRoot of
-          Just root -> runHelp root paths style flags
+          Just root -> runHelp root (firstPath:otherPaths) style flags
           Nothing   -> return $ Left $ Exit.MakeNoOutline
 
 
@@ -85,17 +85,8 @@ runHelp root paths style (Flags maybeOutput _ optimize) =
           do  artifacts <- buildPaths style root details (NE.List p ps)
               case maybeOutput of
                 Nothing ->
-                  case getMains artifacts of
-                    [] ->
-                      return ()
-
-                    [name] ->
-                      do  builder <- toBuilder root details desiredMode artifacts
-                          generate style "index.html" (Html.sandwich name builder) (NE.List name [])
-
-                    name:names ->
-                      do  builder <- toBuilder root details desiredMode artifacts
-                          generate style "elm.js" builder (NE.List name names)
+                  do  builder <- toBuilder root details desiredMode artifacts
+                      generate style "elm.js" builder (Build.getRootNames artifacts)
 
                 Just DevNull ->
                   return ()
@@ -274,7 +265,7 @@ output =
     , _plural = "output files"
     , _parser = parseOutput
     , _suggest = \_ -> return []
-    , _examples = \_ -> return [ "elm.js", "index.html", "/dev/null" ]
+    , _examples = \_ -> return [ "elm.js", "/dev/null" ]
     }
 
 

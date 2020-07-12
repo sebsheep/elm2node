@@ -60,37 +60,32 @@ _command details example args_ flags_ callback =
 -- APP
 
 
-app :: P.Doc -> P.Doc -> [Command] -> IO ()
-app intro outro commands =
+app :: P.Doc -> P.Doc -> Command -> IO ()
+app intro outro (Command cmdName _ details example args_ flags_ callback) =
   do  setLocaleEncoding utf8
       argStrings <- Env.getArgs
       case argStrings of
         [] ->
-          Error.exitWithOverview intro outro commands
+          Error.exitWithHelp Nothing details example args_ flags_
 
         ["--help"] ->
-          Error.exitWithOverview intro outro commands
+          Error.exitWithHelp Nothing details example args_ flags_
 
         ["--version"] ->
           do  hPutStrLn stdout (V.toChars V.compiler)
               Exit.exitSuccess
 
-        command : chunks ->
-          do  case List.find (\cmd -> toName cmd == command) commands of
-                Nothing ->
-                  Error.exitWithUnknown command (map toName commands)
+        chunks ->
+          if elem "--help" chunks then
+            Error.exitWithHelp Nothing details example args_ flags_
+          
+          else
+            case snd $ Chomp.chomp Nothing chunks args_ flags_ of
+              Right (argsValue, flagsValue) ->
+                callback argsValue flagsValue
 
-                Just (Command _ _ details example args_ flags_ callback) ->
-                  if elem "--help" chunks then
-                    Error.exitWithHelp (Just command) details example args_ flags_
-
-                  else
-                    case snd $ Chomp.chomp Nothing chunks args_ flags_ of
-                      Right (argsValue, flagsValue) ->
-                        callback argsValue flagsValue
-
-                      Left err ->
-                        Error.exitWithError err
+              Left err ->
+                Error.exitWithError err
 
 
 

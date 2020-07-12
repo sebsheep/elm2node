@@ -1,13 +1,12 @@
 
-Name: elm
+Name: elm2node
 Version: 0.19.1
 
 Synopsis:
     The `elm` command line interface.
 
 Description:
-    This includes commands like `elm make`, `elm repl`, and many others
-    for helping make Elm developers happy and productive.
+    This is a modified elm compiler to produce a Node.js module exposing pure functions.
 
 Homepage: https://elm-lang.org
 
@@ -34,7 +33,7 @@ Flag dev {
 }
 
 
-Executable elm
+Executable elm2node
     if flag(dev)
         ghc-options: -O0 -Wall -Werror
     else
@@ -187,7 +186,7 @@ Executable elm
         Type.Type
         Type.Unify
         Type.UnionFind
-        Paths_elm
+        Paths_elm2node
 
     Build-depends:
         ansi-terminal >= 0.8 && < 0.9,
