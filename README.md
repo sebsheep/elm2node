@@ -89,3 +89,8 @@ Add a type annotation like (it is a good habit to have, anyway!):
 answer : Int
 answer = 42
 ```
+
+### Do I have the guarantee my elm code will be compiled the same way than with `elm make`?
+Yes! This tool was built from the official elm 0.19.1 compiler, just modifying how the compiler deal
+with exposed functions for the files given as arguments and removing useless stuff for our purpose 
+(reactor, publishing packages...).
