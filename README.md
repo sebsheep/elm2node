@@ -8,7 +8,7 @@ Use the pure functions defined in your [elm](http://elm-lang.or/) code in your N
 
 Only available on Linux right now.
 
-✨ [Install on linux](https://github.com/sebsheep/elm2node/tree/0.1.0/installers/linux) ✨
+✨ [Install on linux](https://github.com/sebsheep/elm2node/tree/0.1.0-alpha-2/installers/linux) ✨
 
 <br>
 
