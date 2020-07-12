@@ -18,7 +18,7 @@ Say you have some wonderful elm code, computing sums and storing specific data:
 
 ```elm
 -- src/Main.elm
-module Main exposing (anwser, sum)
+module Main exposing (answer, sum)
 
 answer : Int
 answer = 42
