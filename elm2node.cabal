@@ -37,7 +37,9 @@ Executable elm2node
     if flag(dev)
         ghc-options: -O0 -Wall -Werror
     else
-        ghc-options: -O2 -rtsopts -threaded "-with-rtsopts=-N -qg -A128m"
+        ghc-options: -O2 -rtsopts -threaded -static "-with-rtsopts=-N -qg -A128m"
+        cc-options: -static
+        ld-options: -static -pthread
         -- add -eventlog for (elm make src/Main.elm +RTS -l; threadscope elm.eventlog)
         -- https://www.oreilly.com/library/view/parallel-and-concurrent/9781449335939/
 
