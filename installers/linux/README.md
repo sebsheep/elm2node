@@ -18,7 +18,7 @@ cd ~/Desktop/
 # | -o elm2node.gz | name the file elm.gz |
 # +----------------+----------------------+
 #
-curl -L -o elm2node.gz https://github.com/sebsheep/elm2node/releases/download/0.1.0/elm2node.gz
+curl -L -o elm2node.gz https://github.com/sebsheep/elm2node/releases/download/0.1.0-alpha-2/elm2node.gz
 
 # There should now be a file named `elm2node.gz` on your Desktop.
 #
@@ -82,3 +82,15 @@ The following command should remove everything:
 #
 sudo rm /usr/local/bin/elm2node
 ```
+
+<br/>
+
+## I did'nt write these instructions!
+
+These instructions are almost the same than [the ones to install the official elm compiler](https://github.com/elm/compiler/blob/master/installers/linux/README.md),
+I've just replace `elm` by `elm2node` at some places.
+
+I think these instructions are very well written and would looooove that all install instructions
+being so nice and instructive, instead of cryptic bash commands!
+
+So thank you Evan for those wonderfull instructions!
