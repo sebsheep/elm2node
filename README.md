@@ -1,6 +1,6 @@
 # Elm To Node
 
-Use the pure functions defined in your [elm](http://elm-lang.or/) code in your Node.js server!
+Use the pure functions defined in your [elm](http://elm-lang.or/) code in your Node.js server in a synchronous way!
 
 <br>
 
